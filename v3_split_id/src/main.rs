@@ -6,8 +6,7 @@ fn is_id(c: char) -> bool {
     c.is_alphanumeric() || c == '-' || c == '_'
 }
 
-#[derive(PartialEq)]
-#[derive(Debug)]
+#[derive(PartialEq, Debug)]
 enum CharType {
     Id,
     Space,
@@ -89,8 +88,17 @@ mod tests {
     #[test]
     fn test_split_words() {
         assert_eq!(split_into_words("Hello World"), vec!["Hello", " ", "World"]);
-        assert_eq!(split_into_words("Hello   World!!!"), vec!["Hello", "   ", "World", "!", "!", "!"]);
-        assert_eq!(split_into_words("assert!(is_id(c))"), vec!["assert", "!", "(", "is_id", "(", "c", ")", ")"]);
-        assert_eq!(split_into_words("if true {\n\treturn true;\n}"), vec!["if", " ", "true", " ", "{", "\n\t", "return", " ", "true", ";", "\n", "}"]);
+        assert_eq!(
+            split_into_words("Hello   World!!!"),
+            vec!["Hello", "   ", "World", "!", "!", "!"]
+        );
+        assert_eq!(
+            split_into_words("assert!(is_id(c))"),
+            vec!["assert", "!", "(", "is_id", "(", "c", ")", ")"]
+        );
+        assert_eq!(
+            split_into_words("if true {\n\treturn true;\n}"),
+            vec!["if", " ", "true", " ", "{", "\n\t", "return", " ", "true", ";", "\n", "}"]
+        );
     }
 }
