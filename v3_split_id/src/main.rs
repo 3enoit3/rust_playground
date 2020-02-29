@@ -25,16 +25,34 @@ fn get_char_type(c: char) -> CharType {
     CharType::Other
 }
 
-fn split_into_words(s: &str) -> Vec<&str> {
-    let mut tokens: Vec<&str> = Vec::new();
+fn split_into_words(s: &str) -> Vec<String> {
+    let mut tokens: Vec<String> = Vec::new();
     let mut token: Vec<char> = Vec::new();
     let mut token_type = CharType::Uninitialized;
 
-    for c in s.chars() {
-        if token.is_empty() {
-            token.push(c)
+    fn yield_token(token: &mut Vec<char>, tokens: &mut Vec<String>) {
+        if !token.is_empty() {
+            let token_str: String = token.iter().collect();
+            tokens.push(token_str);
+            token.clear();
         }
     }
+
+    for c in s.chars() {
+        if token_type == CharType::Other {
+            yield_token(&mut token, &mut tokens);
+            token_type = CharType::Uninitialized;
+        }
+
+        let new_token_type = get_char_type(c);
+        if new_token_type != token_type {
+            yield_token(&mut token, &mut tokens);
+            token_type = new_token_type;
+        }
+        token.push(c);
+    }
+
+    yield_token(&mut token, &mut tokens);
     tokens
 }
 
@@ -66,5 +84,13 @@ mod tests {
         for c in "!()&".to_string().chars() {
             assert_eq!(get_char_type(c), CharType::Other);
         }
+    }
+
+    #[test]
+    fn test_split_words() {
+        assert_eq!(split_into_words("Hello World"), vec!["Hello", " ", "World"]);
+        assert_eq!(split_into_words("Hello   World!!!"), vec!["Hello", "   ", "World", "!", "!", "!"]);
+        assert_eq!(split_into_words("assert!(is_id(c))"), vec!["assert", "!", "(", "is_id", "(", "c", ")", ")"]);
+        assert_eq!(split_into_words("if true {\n\treturn true;\n}"), vec!["if", " ", "true", " ", "{", "\n\t", "return", " ", "true", ";", "\n", "}"]);
     }
 }
