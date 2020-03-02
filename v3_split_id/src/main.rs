@@ -55,8 +55,27 @@ fn split_into_words(s: &str) -> Vec<String> {
     tokens
 }
 
+fn diff_words(s1: &Vec<String>, s2: &Vec<String>) -> bool {
+    if s1 != s2 {
+        if s1.len() != s2.len() {
+            println!("{:?} and {:?} have different size", s1, s2);
+            return false;
+        }
+        for (w1, w2) in s1.iter().zip(s2) {
+            if w1 != w2 {
+                println!("{} and {} differ", w1, w2);
+                return false;
+            }
+        }
+    }
+    s1 == s2
+}
+
 fn main() {
-    println!("{:?}", split_into_words(&hello()));
+    assert!(diff_words(&split_into_words("Hello World"), &split_into_words("Hello World")));
+    assert!(diff_words(&split_into_words(""), &split_into_words("")));
+    assert!(!diff_words(&split_into_words("Hello World"), &split_into_words("Hello World!")));
+    assert!(!diff_words(&split_into_words("Hello Wind"), &split_into_words("Hello World")));
 }
 
 mod tests {
@@ -100,5 +119,13 @@ mod tests {
             split_into_words("if true {\n\treturn true;\n}"),
             vec!["if", " ", "true", " ", "{", "\n\t", "return", " ", "true", ";", "\n", "}"]
         );
+    }
+
+    #[test]
+    fn test_diff_words() {
+        assert!(diff_words(&split_into_words("Hello World"), &split_into_words("Hello World")));
+        assert!(diff_words(&split_into_words(""), &split_into_words("")));
+        assert!(!diff_words(&split_into_words("Hello World"), &split_into_words("Hello World!")));
+        assert!(!diff_words(&split_into_words("Hello Wind"), &split_into_words("Hello World")));
     }
 }
