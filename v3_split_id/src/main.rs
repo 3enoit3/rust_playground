@@ -69,6 +69,25 @@ fn diff_words(s1: &[String], s2: &[String]) -> bool {
     s1 == s2
 }
 
+struct FragmentGen<'a> {
+    src: &'a[String],
+    len: usize,
+    curr: usize,
+}
+
+fn new_fragment_gen(src: &[String], len: usize) -> FragmentGen {
+    FragmentGen{src: src, len: len, curr: 0}
+}
+fn gen_next_fragment<'a>(gen: &'a mut FragmentGen) -> Option<&'a[String]> {
+    let last = gen.curr + gen.len;
+    if last <= gen.src.len() {
+        let curr = Some(&gen.src[gen.curr..last]);
+        gen.curr += 1;
+        return curr;
+    }
+    None
+}
+
 fn main() {
     assert!(diff_words(&split_into_words("Hello World"), &split_into_words("Hello World")));
     assert!(diff_words(&split_into_words(""), &split_into_words("")));
@@ -125,5 +144,18 @@ mod tests {
         assert!(diff_words(&split_into_words(""), &split_into_words("")));
         assert!(!diff_words(&split_into_words("Hello World"), &split_into_words("Hello World!")));
         assert!(!diff_words(&split_into_words("Hello Wind"), &split_into_words("Hello World")));
+    }
+
+    #[test]
+    fn test_fragments() {
+        let words = split_into_words("1 2 3 4");
+        let mut gen = new_fragment_gen(&words, 2);
+
+        // helper
+        //let s = |words: Vec<&str>| -> Vec<String> {
+            //words.iter().map(|s| s.to_string())
+        //};
+
+        assert_eq!(gen_next_fragment(&mut gen), Some(&vec!["1".to_string(), " ".to_string()][..]))
     }
 }
