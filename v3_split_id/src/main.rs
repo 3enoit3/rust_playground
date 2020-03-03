@@ -1,6 +1,3 @@
-fn hello() -> String {
-    "Hello World!".to_string()
-}
 
 fn is_id(c: char) -> bool {
     c.is_alphanumeric() || c == '-' || c == '_'
@@ -29,33 +26,34 @@ fn split_into_words(s: &str) -> Vec<String> {
     let mut token: Vec<char> = Vec::new();
     let mut token_type = CharType::Uninitialized;
 
-    fn yield_token(token: &mut Vec<char>, tokens: &mut Vec<String>) {
+    let mut yield_token = |token: &[char]| {
         if !token.is_empty() {
             let token_str: String = token.iter().collect();
             tokens.push(token_str);
-            token.clear();
         }
-    }
+    };
 
     for c in s.chars() {
         if token_type == CharType::Other {
-            yield_token(&mut token, &mut tokens);
+            yield_token(&token);
+            token.clear();
             token_type = CharType::Uninitialized;
         }
 
         let new_token_type = get_char_type(c);
         if new_token_type != token_type {
-            yield_token(&mut token, &mut tokens);
+            yield_token(&token);
+            token.clear();
             token_type = new_token_type;
         }
         token.push(c);
     }
 
-    yield_token(&mut token, &mut tokens);
+    yield_token(&token);
     tokens
 }
 
-fn diff_words(s1: &Vec<String>, s2: &Vec<String>) -> bool {
+fn diff_words(s1: &[String], s2: &[String]) -> bool {
     if s1 != s2 {
         if s1.len() != s2.len() {
             println!("{:?} and {:?} have different size", s1, s2);
