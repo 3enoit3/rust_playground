@@ -26,13 +26,14 @@ fn get_char_type(c: char) -> CharType {
 struct Words<'a> {
     src: &'a str,
     chars: Box<dyn Iterator<Item = (usize, char)> + 'a>,
-    last_pos: usize,
     is_same_word: fn(&str, char) -> bool,
+    last_pos: usize,
 }
 
 impl<'a> Words<'a> {
-    fn new(s: & str, is_same_word: fn(&str, char) -> bool) -> Words<> {
-        Words{src: s, chars: Box::new(s.chars().enumerate()), last_pos: 0, is_same_word: is_same_word}
+    fn new(s: &str, is_same_word: fn(&str, char) -> bool) -> Words {
+        let chars = Box::new(s.chars().enumerate());
+        Words{src: s, chars: chars, is_same_word: is_same_word, last_pos: 0}
     }
 }
 
@@ -69,6 +70,52 @@ fn is_same_word(curr: &str, next: char) -> bool {
 }
 
 // Fragments
+struct SizedFragments<'a> {
+    src: &'a [&'a str],
+    size: usize,
+    curr_pos: usize,
+}
+
+impl<'a> SizedFragments<'a> {
+    fn new<'b>(words: &'b [&'b str], size: usize) -> SizedFragments<'b> {
+        SizedFragments{src: words, size: size, curr_pos: 0}
+    }
+}
+
+impl<'a> Iterator for SizedFragments<'a> {
+    type Item = &'a [&'a str];
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let last = self.curr_pos + self.size;
+        if last > self.src.len() {
+            return None;
+        }
+        let fragment = &self.src[self.curr_pos..last];
+        self.curr_pos += 1;
+        Some(fragment)
+    }
+}
+
+//struct Fragments<'a> {
+    //src: &'a [&'a str],
+    //curr_size: Box<SizedFragments<'a>>,
+//}
+
+//impl<'a> Fragments<'a> {
+    //fn new<'b>(words: &'b [&'b str]) -> Fragments<'b> {
+        //Fragments{src: words, curr_size: SizedFragments::new(words, words.len())}
+    //}
+//}
+
+//impl<'a> Iterator for Fragments<'a> {
+    //type Item = &'a [&'a str];
+
+    //fn next(&mut self) -> Option<Self::Item> {
+        //match self.curr_size.next() {
+            //None => { 
+
+    //}
+//}
 
 // Diff
 #[derive(PartialEq, Debug)]
@@ -90,10 +137,10 @@ mod tests {
 
     #[test]
     fn test_words() {
-        fn test(input: &str, output_ref: Vec<&str>) {
-            let words = Words::new(input, is_same_word);
-            let output: Vec<&str> = words.collect();
-            assert_eq!(output, output_ref);
+        fn test(input: &str, expected: Vec<&str>) {
+            let it = Words::new(input, is_same_word);
+            let output: Vec<&str> = it.collect();
+            assert_eq!(output, expected);
         }
 
         test("", [].to_vec());
@@ -102,6 +149,22 @@ mod tests {
         test("Hello   World", ["Hello", "   ", "World"].to_vec());
         test("Hello&World", ["Hello", "&", "World"].to_vec());
         test("Hello&!World", ["Hello", "&", "!", "World"].to_vec());
+    }
+
+    #[test]
+    fn test_sized_fragments() {
+        fn test(input: Vec<u8>, size: usize, expected: Vec<Vec<u8>>) {
+            let owned_input: Vec<String> = input.iter().map(|x| x.to_string()).collect();
+            let it_input: Vec<&str> = owned_input.iter().map(|x| &x[..]).collect();
+            let it = SizedFragments::new(&it_input, size);
+            let it_output: Vec<Vec<u8>> = it.map(|c| c.iter().map(|i| i.parse::<u8>().unwrap()).collect()).collect();
+            assert_eq!(it_output, expected);
+        }
+
+        test([1,2,3,4].to_vec(), 1, [[1].to_vec(), [2].to_vec(), [3].to_vec(), [4].to_vec()].to_vec());
+        test([1,2,3,4].to_vec(), 2, [[1,2].to_vec(), [2,3].to_vec(), [3,4].to_vec()].to_vec());
+        test([1,2,3,4].to_vec(), 3, [[1,2,3].to_vec(), [2,3,4].to_vec()].to_vec());
+        test([1,2,3,4].to_vec(), 4, [[1,2,3,4].to_vec()].to_vec());
     }
 
     #[test]
