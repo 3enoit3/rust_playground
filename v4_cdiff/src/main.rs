@@ -23,41 +23,48 @@ fn get_char_type(c: char) -> CharType {
 }
 
 // Words
-struct WordGen<'a> {
+struct Words<'a> {
     src: &'a str,
-    curr_pos: usize,
-    curr_word_pos: usize,
+    chars: Box<dyn Iterator<Item = (usize, char)> + 'a>,
+    last_pos: usize,
+    is_same_word: fn(&str, char) -> bool,
 }
 
-fn can_accumulate(curr: &[char], next: char) -> bool {
-    match curr.get(0) {
-        Some(c) => (get_char_type(*c) != CharType::Other) || (get_char_type(*c) != get_char_type(next)),
-        None => true,
+impl Words<'_> {
+    fn new<'a>(s: &'a str, is_same_word: fn(&str, char) -> bool) -> Words<'a> {
+        Words{src: s, chars: Box::new(s.chars().enumerate()), last_pos: 0, is_same_word: is_same_word}
     }
 }
 
-impl WordGen<'_> {
-    fn new<'a>(src: &'a str) -> WordGen<'a> {
-        WordGen{src: src, curr_pos: 0, curr_word_pos: 0}
-    }
+impl<'i> Iterator for Words<'i> {
+    type Item = &'i str;
 
-    fn get<'a>(&'a self) -> &'a str {
-        &self.src[self.curr_word_pos..self.curr_pos]
-    }
-
-    fn next(&mut self) {
-        self.curr_word_pos = self.curr_pos;
-        while !self.is_done() {
-            match self.src.get(self.curr_pos) {
-                Some(c) => if !can_accumulate(&self.src[self.curr_word_pos..self.curr_pos], *c) { return; },
-                None => return,
+    fn next(&mut self) -> Option<Self::Item> {
+        // Next word
+        while let Some((i, c)) = self.chars.next() {
+            let current_word = &self.src[self.last_pos..i];
+            if !(self.is_same_word)(&current_word, c) {
+                self.last_pos = i;
+                return Some(&current_word);
             }
-            self.curr += 1;
         }
-    }
 
-    fn is_done(&self) -> bool {
-        self.curr_pos >= self.src.len()
+        // Last word
+        if self.last_pos < self.src.len() {
+            let current_word = &self.src[self.last_pos..];
+            self.last_pos = self.src.len();
+            return Some(&current_word);
+        }
+
+        // End
+        None
+    }
+}
+
+fn is_same_word(curr: &str, next: char) -> bool {
+    match curr.chars().next() {
+        Some(c) => (get_char_type(c) != CharType::Other) && (get_char_type(c) == get_char_type(next)),
+        None => true,
     }
 }
 
@@ -80,6 +87,22 @@ fn main() {
 
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_words() {
+        fn test(input: &str, output_ref: Vec<&str>) {
+            let words = Words::new(input, is_same_word);
+            let output: Vec<&str> = words.collect();
+            assert_eq!(output, output_ref);
+        }
+
+        test("", [].to_vec());
+        test("Hello", ["Hello"].to_vec());
+        test("Hello World", ["Hello", " ", "World"].to_vec());
+        test("Hello   World", ["Hello", "   ", "World"].to_vec());
+        test("Hello&World", ["Hello", "&", "World"].to_vec());
+        test("Hello&!World", ["Hello", "&", "!", "World"].to_vec());
+    }
 
     #[test]
     fn test_get_diff() {
