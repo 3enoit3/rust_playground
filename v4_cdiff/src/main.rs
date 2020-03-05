@@ -30,14 +30,14 @@ struct Words<'a> {
     is_same_word: fn(&str, char) -> bool,
 }
 
-impl Words<'_> {
-    fn new<'a>(s: &'a str, is_same_word: fn(&str, char) -> bool) -> Words<'a> {
+impl<'a> Words<'a> {
+    fn new(s: & str, is_same_word: fn(&str, char) -> bool) -> Words<> {
         Words{src: s, chars: Box::new(s.chars().enumerate()), last_pos: 0, is_same_word: is_same_word}
     }
 }
 
-impl<'i> Iterator for Words<'i> {
-    type Item = &'i str;
+impl<'a> Iterator for Words<'a> {
+    type Item = &'a str;
 
     fn next(&mut self) -> Option<Self::Item> {
         // Next word
