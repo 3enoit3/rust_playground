@@ -96,26 +96,34 @@ impl<'a> Iterator for SizedFragments<'a> {
     }
 }
 
-//struct Fragments<'a> {
-    //src: &'a [&'a str],
-    //curr_size: Box<SizedFragments<'a>>,
-//}
+struct Fragments<'a> {
+    src: &'a [&'a str],
+    curr_size: Box<SizedFragments<'a>>,
+}
 
-//impl<'a> Fragments<'a> {
-    //fn new<'b>(words: &'b [&'b str]) -> Fragments<'b> {
-        //Fragments{src: words, curr_size: SizedFragments::new(words, words.len())}
-    //}
-//}
+impl<'a> Fragments<'a> {
+    fn new<'b>(words: &'b [&'b str]) -> Fragments<'b> {
+        let largest_fragment = Box::new(SizedFragments::new(words, words.len()));
+        Fragments{src: words, curr_size: largest_fragment}
+    }
+}
 
-//impl<'a> Iterator for Fragments<'a> {
-    //type Item = &'a [&'a str];
+impl<'a> Iterator for Fragments<'a> {
+    type Item = &'a [&'a str];
 
-    //fn next(&mut self) -> Option<Self::Item> {
-        //match self.curr_size.next() {
-            //None => { 
-
-    //}
-//}
+    fn next(&mut self) -> Option<Self::Item> {
+        match self.curr_size.next() {
+            None => {
+                if self.curr_size.size > 1 {
+                    self.curr_size = Box::new(SizedFragments::new(self.src, self.curr_size.size - 1));
+                    return self.curr_size.next();
+                }
+                None
+            },
+            Some(c) => Some(c),
+        }
+    }
+}
 
 // Diff
 #[derive(PartialEq, Debug)]
@@ -165,6 +173,24 @@ mod tests {
         test([1,2,3,4].to_vec(), 2, [[1,2].to_vec(), [2,3].to_vec(), [3,4].to_vec()].to_vec());
         test([1,2,3,4].to_vec(), 3, [[1,2,3].to_vec(), [2,3,4].to_vec()].to_vec());
         test([1,2,3,4].to_vec(), 4, [[1,2,3,4].to_vec()].to_vec());
+    }
+
+    #[test]
+    fn test_fragments() {
+        fn test(input: Vec<u8>, expected: Vec<Vec<u8>>) {
+            let owned_input: Vec<String> = input.iter().map(|x| x.to_string()).collect();
+            let it_input: Vec<&str> = owned_input.iter().map(|x| &x[..]).collect();
+            let it = Fragments::new(&it_input);
+            let it_output: Vec<Vec<u8>> = it.map(|c| c.iter().map(|i| i.parse::<u8>().unwrap()).collect()).collect();
+            assert_eq!(it_output, expected);
+        }
+
+        test([1,2,3,4].to_vec(), [
+            [1,2,3,4].to_vec(),
+            [1,2,3].to_vec(), [2,3,4].to_vec(),
+            [1,2].to_vec(), [2,3].to_vec(), [3,4].to_vec(),
+            [1].to_vec(), [2].to_vec(), [3].to_vec(), [4].to_vec(),
+        ].to_vec());
     }
 
     #[test]
