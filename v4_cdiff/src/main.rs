@@ -127,15 +127,47 @@ impl<'a> Iterator for Fragments<'a> {
 
 // Diff
 #[derive(PartialEq, Debug)]
-struct Diff<'a, 'b> {
+struct DiffChunk<'a, 'b> {
     before: Vec<&'a str>,
     after: Vec<&'b str>
 }
 
-fn get_diff<'a, 'b>(s1: &'a str, s2: &'b str) -> Diff<'a, 'b> {
-    Diff{before: vec![s1], after: vec![s2]}
+impl<'a, 'b> DiffChunk<'a, 'b> {
+    fn is_same(&self) -> bool {
+        self.before == self.after
+    }
+
+    fn is_diff(&self) -> bool {
+        !self.before.is_empty() && !self.after.is_empty() && self.before != self.after
+    }
+
+    fn is_del(&self) -> bool {
+        !self.before.is_empty() && self.after.is_empty()
+    }
+
+    fn is_add(&self) -> bool {
+        self.before.is_empty() && !self.after.is_empty()
+    }
 }
 
+fn build_test_diff<'a>(s: &'a str) -> Vec<DiffChunk<'a, 'a>> {
+    let mut chunks = Vec::new();
+    for chunk in s.split('|') {
+        if chunk.contains(">") {
+            let fragments: Vec<&str> = chunk.split('>').collect();
+            let before = Words::new(fragments[0], is_same_word).collect();
+            let after = Words::new(fragments[1], is_same_word).collect();
+            chunks.push(DiffChunk{before: before, after: after});
+        }
+        else {
+            let same: Vec<&str> = Words::new(chunk, is_same_word).collect();
+            chunks.push(DiffChunk{before: same.clone(), after: same});
+        }
+    }
+    chunks
+}
+
+// Main
 fn main() {
     println!("Hello, world!");
 }
@@ -151,12 +183,12 @@ mod tests {
             assert_eq!(output, expected);
         }
 
-        test("", [].to_vec());
-        test("Hello", ["Hello"].to_vec());
-        test("Hello World", ["Hello", " ", "World"].to_vec());
-        test("Hello   World", ["Hello", "   ", "World"].to_vec());
-        test("Hello&World", ["Hello", "&", "World"].to_vec());
-        test("Hello&!World", ["Hello", "&", "!", "World"].to_vec());
+        test("", vec!());
+        test("Hello", vec!("Hello"));
+        test("Hello World", vec!("Hello", " ", "World"));
+        test("Hello   World", vec!("Hello", "   ", "World"));
+        test("Hello&World", vec!("Hello", "&", "World"));
+        test("Hello&!World", vec!("Hello", "&", "!", "World"));
     }
 
     #[test]
@@ -169,10 +201,10 @@ mod tests {
             assert_eq!(it_output, expected);
         }
 
-        test([1,2,3,4].to_vec(), 1, [[1].to_vec(), [2].to_vec(), [3].to_vec(), [4].to_vec()].to_vec());
-        test([1,2,3,4].to_vec(), 2, [[1,2].to_vec(), [2,3].to_vec(), [3,4].to_vec()].to_vec());
-        test([1,2,3,4].to_vec(), 3, [[1,2,3].to_vec(), [2,3,4].to_vec()].to_vec());
-        test([1,2,3,4].to_vec(), 4, [[1,2,3,4].to_vec()].to_vec());
+        test(vec!(1,2,3,4), 1, [vec!(1), vec!(2), vec!(3), vec!(4)].to_vec());
+        test(vec!(1,2,3,4), 2, [vec!(1,2), vec!(2,3), vec!(3,4)].to_vec());
+        test(vec!(1,2,3,4), 3, [vec!(1,2,3), vec!(2,3,4)].to_vec());
+        test(vec!(1,2,3,4), 4, [vec!(1,2,3,4)].to_vec());
     }
 
     #[test]
@@ -185,17 +217,26 @@ mod tests {
             assert_eq!(it_output, expected);
         }
 
-        test([1,2,3,4].to_vec(), [
-            [1,2,3,4].to_vec(),
-            [1,2,3].to_vec(), [2,3,4].to_vec(),
-            [1,2].to_vec(), [2,3].to_vec(), [3,4].to_vec(),
-            [1].to_vec(), [2].to_vec(), [3].to_vec(), [4].to_vec(),
+        test(vec!(1,2,3,4), [
+            vec!(1,2,3,4),
+            vec!(1,2,3), vec!(2,3,4),
+            vec!(1,2), vec!(2,3), vec!(3,4),
+            vec!(1), vec!(2), vec!(3), vec!(4),
         ].to_vec());
     }
 
     #[test]
-    fn test_get_diff() {
-        assert_eq!(get_diff("Hello", "World"), Diff{before: ["Hello"].to_vec(), after: ["World"].to_vec()});
-        // assert_eq!(get_diff("Hello World", "Hello world"), Diff{before: ["Hello", " ", "World"].to_vec(), after: ["Hello", " ", "world"].to_vec()});
+    fn test_diff_chuncks() {
+        assert!(DiffChunk{before:vec!("Hello"), after:vec!("Hello")}.is_same());
+        assert!(DiffChunk{before:vec!("Hello"), after:vec!("World")}.is_diff());
+        assert!(DiffChunk{before:vec!("Hello"), after:vec!()}.is_del());
+        assert!(DiffChunk{before:vec!(), after:vec!("World")}.is_add());
+
+        assert_eq!(build_test_diff("Hello"), vec!(DiffChunk{before: vec!("Hello"), after: vec!("Hello")}));
+        assert_eq!(build_test_diff("Hello>World"), vec!(DiffChunk{before: vec!("Hello"), after: vec!("World")}));
+        assert_eq!(build_test_diff("Hello>"), vec!(DiffChunk{before: vec!("Hello"), after: vec!()}));
+        assert_eq!(build_test_diff(">Hello"), vec!(DiffChunk{before: [].to_vec(), after: vec!("Hello")}));
+        assert_eq!(build_test_diff("Hello>World|!"), vec!(DiffChunk{before: vec!("Hello"), after: vec!("World")}, DiffChunk{before: vec!("!"), after: vec!("!")}));
+        assert_eq!(build_test_diff("Hello>World|!>"), vec!(DiffChunk{before: vec!("Hello"), after: vec!("World")}, DiffChunk{before: vec!("!"), after: vec!()}));
     }
 }
