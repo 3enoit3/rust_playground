@@ -125,6 +125,18 @@ impl<'a> Iterator for Fragments<'a> {
     }
 }
 
+fn contains<'a, 'b> (small: &[&str], big: &'a [&'b str]) -> Option<(&'a [&'b str], &'a [&'b str], &'a [&'b str])> {
+    for i in 0..big.len()-small.len()+1 {
+        let subset = &big[i..i+small.len()];
+        if subset == small {
+            let before = &big[..i];
+            let after = &big[i+small.len()..];
+            return Some((before, subset, after));
+        }
+    }
+    None
+}
+
 // Diff
 #[derive(PartialEq, Debug)]
 struct DiffChunk<'a, 'b> {
@@ -148,6 +160,25 @@ impl<'a, 'b> DiffChunk<'a, 'b> {
     fn is_add(&self) -> bool {
         self.old.is_empty() && !self.new.is_empty()
     }
+
+}
+
+fn diff<'a, 'b>(old: &'a str, new: &'b str) -> Vec<DiffChunk<'a, 'b>> {
+    let old_words: Vec<&str> = Words::new(old, is_same_word).collect();
+    let new_words: Vec<&str> = Words::new(new, is_same_word).collect();
+
+    if old_words.len() > new_words.len() {
+        let small = &new_words;
+        let big = &old_words;
+    }
+    else {
+        let small = &old_words;
+        let big = &new_words;
+    }
+
+    //for f in Fragments::new(small) {
+    //}
+    vec!()
 }
 
 fn build_test_diff<'a>(s: &'a str) -> Vec<DiffChunk<'a, 'a>> {
@@ -223,6 +254,14 @@ mod tests {
             vec!(1,2), vec!(2,3), vec!(3,4),
             vec!(1), vec!(2), vec!(3), vec!(4),
         ].to_vec());
+    }
+
+    #[test]
+    fn test_contains() {
+        assert_eq!(contains(&vec!("2")[..], &vec!("1", "2", "3")[..]), Some((&vec!("1")[..], &vec!("2")[..], &vec!("3")[..])));
+        assert_eq!(contains(&vec!("1")[..], &vec!("1", "2", "3")[..]), Some((&vec!()[..], &vec!("1")[..], &vec!("2", "3")[..])));
+        assert_eq!(contains(&vec!("3")[..], &vec!("1", "2", "3")[..]), Some((&vec!("1", "2")[..], &vec!("3")[..], &vec!()[..])));
+        assert_eq!(contains(&vec!("4")[..], &vec!("1", "2", "3")[..]), None);
     }
 
     #[test]
